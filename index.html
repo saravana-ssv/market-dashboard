@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Market Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f5f5f3;
+      --bg-tertiary: #eeede8;
+      --text-primary: #1a1a18;
+      --text-secondary: #6b6b67;
+      --border: rgba(0,0,0,0.12);
+      --border-md: rgba(0,0,0,0.2);
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --up: #3B6D11;
+      --dn: #A32D2D;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #1c1c1a;
+        --bg-secondary: #252523;
+        --bg-tertiary: #2e2e2b;
+        --text-primary: #f0efe8;
+        --text-secondary: #999891;
+        --border: rgba(255,255,255,0.1);
+        --border-md: rgba(255,255,255,0.18);
+        --up: #97C459;
+        --dn: #F09595;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .container { max-width: 900px; margin: 0 auto; }
+
+    header { margin-bottom: 1.75rem; }
+    header h1 { font-size: 22px; font-weight: 500; color: var(--text-primary); }
+    header p { font-size: 13px; color: var(--text-secondary); margin-top: 3px; }
+
+    .ticker-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.25rem; }
+    .ticker-btn {
+      padding: 6px 14px; border-radius: 20px;
+      border: 0.5px solid var(--border-md);
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      background: var(--bg-secondary); color: var(--text-secondary);
+      transition: all 0.15s;
+    }
+    .ticker-btn.active { background: #185FA5; color: #fff; border-color: #185FA5; }
+    .ticker-btn:hover:not(.active) { background: var(--bg-primary); color: var(--text-primary); }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px; margin-bottom: 1.25rem;
+    }
+    @media (max-width: 600px) { .metrics { grid-template-columns: repeat(2, 1fr); } }
+
+    .metric {
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+    }
+    .metric-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+    .metric-value { font-size: 22px; font-weight: 500; color: var(--text-primary); }
+    .metric-sub { font-size: 12px; margin-top: 2px; }
+    .up { color: var(--up); } .dn { color: var(--dn); }
+
+    .range-btns { display: flex; gap: 6px; margin-bottom: 10px; }
+    .range-btn {
+      font-size: 12px; padding: 3px 10px; border-radius: 4px;
+      border: 0.5px solid var(--border);
+      background: transparent; color: var(--text-secondary); cursor: pointer;
+    }
+    .range-btn.active {
+      background: var(--bg-secondary); color: var(--text-primary);
+      border-color: var(--border-md);
+    }
+
+    .chart-card {
+      background: var(--bg-primary);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      margin-bottom: 1.25rem;
+    }
+    .chart-wrap { position: relative; width: 100%; height: 280px; }
+
+    .section-title {
+      font-size: 12px; font-weight: 500; color: var(--text-secondary);
+      margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+
+    .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 8px; font-size: 12px; color: var(--text-secondary); }
+    .legend-dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 4px; vertical-align: middle; }
+
+    .compare-chart-wrap { position: relative; width: 100%; height: 220px; }
+
+    .watchlist {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px; margin-bottom: 1.25rem;
+    }
+    @media (max-width: 600px) { .watchlist { grid-template-columns: repeat(2, 1fr); } }
+
+    .watch-card {
+      background: var(--bg-primary);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+    }
+    .watch-name { font-size: 13px; font-weight: 500; color: var(--text-primary); margin-bottom: 2px; }
+    .watch-type { font-weight: 400; color: var(--text-secondary); font-size: 11px; }
+    .watch-price { font-size: 18px; font-weight: 500; color: var(--text-primary); }
+    .bar-wrap { height: 4px; background: var(--border); border-radius: 2px; margin-top: 8px; }
+    .bar-fill { height: 4px; border-radius: 2px; }
+
+    footer { font-size: 12px; color: var(--text-secondary); text-align: right; margin-top: 8px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Market Dashboard</h1>
+    <p>Stocks · Crypto · Indices · Metals — simulated data</p>
+  </header>
+
+  <div class="ticker-bar" id="tickerBar"></div>
+  <div class="metrics" id="metrics"></div>
+
+  <div class="chart-card">
+    <div class="range-btns" id="rangeBtns">
+      <button class="range-btn active" data-r="1W">1W</button>
+      <button class="range-btn" data-r="1M">1M</button>
+      <button class="range-btn" data-r="3M">3M</button>
+      <button class="range-btn" data-r="1Y">1Y</button>
+    </div>
+    <div class="chart-wrap"><canvas id="priceChart"></canvas></div>
+  </div>
+
+  <div class="section-title">Side-by-side comparison (% change)</div>
+  <div class="legend" id="compareLegend"></div>
+  <div class="chart-card">
+    <div class="compare-chart-wrap"><canvas id="compareChart"></canvas></div>
+  </div>
+
+  <div class="section-title">Watchlist</div>
+  <div class="watchlist" id="watchlist"></div>
+
+  <footer>Data: simulated · Last updated just now</footer>
+</div>
+
+<script>
+const ASSETS = [
+  { symbol: 'AAPL',  name: 'Apple',      type: 'stock',  color: '#185FA5', price: 213.49, chg: 1.24,  vol: '58.2M', mktcap: '3.28T' },
+  { symbol: 'TSLA',  name: 'Tesla',      type: 'stock',  color: '#3B6D11', price: 172.63, chg: -2.11, vol: '91.4M', mktcap: '549B'  },
+  { symbol: 'NVDA',  name: 'NVIDIA',     type: 'stock',  color: '#854F0B', price: 875.40, chg: 3.05,  vol: '44.1M', mktcap: '2.15T' },
+  { symbol: 'MSFT',  name: 'Microsoft',  type: 'stock',  color: '#533AB7', price: 415.20, chg: 0.67,  vol: '22.8M', mktcap: '3.09T' },
+  { symbol: 'BTC',   name: 'Bitcoin',    type: 'crypto', color: '#BA7517', price: 68420,  chg: 2.88,  vol: '28.3B', mktcap: '1.35T' },
+  { symbol: 'NDX',   name: 'Nasdaq 100', type: 'index',  color: '#0F6E56', price: 18342,  chg: 0.91,  vol: '—',     mktcap: '—'     },
+  { symbol: 'SPX',   name: 'S&P 500',    type: 'index',  color: '#993356', price: 5248,   chg: 0.52,  vol: '—',     mktcap: '—'     },
+  { symbol: 'XAU',   name: 'Gold',       type: 'metal',  color: '#BA7517', price: 2328,   chg: 0.38,  vol: '—',     mktcap: '—'     },
+  { symbol: 'XAG',   name: 'Silver',     type: 'metal',  color: '#888780', price: 27.42,  chg: -0.21, vol: '—',     mktcap: '—'     },
+];
+
+let active = 'AAPL';
+let activeRange = '1W';
+const RANGES = { '1W': 7, '1M': 30, '3M': 90, '1Y': 365 };
+
+function getAsset(sym) { return ASSETS.find(a => a.symbol === sym); }
+
+function getVol(a) {
+  if (a.type === 'crypto') return 0.04;
+  if (a.type === 'index') return 0.008;
+  if (a.type === 'metal') return 0.007;
+  return 0.015;
+}
+
+function fmtPrice(a, val) {
+  const v = val !== undefined ? val : a.price;
+  if (a.type === 'crypto') return '$' + Math.round(v).toLocaleString('en-US');
+  if (a.type === 'index') return v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function genPrices(base, days, vol) {
+  let p = base * (1 - vol * days / 200);
+  const arr = [];
+  for (let i = 0; i < days; i++) {
+    p = p * (1 + (Math.random() - 0.48) * vol);
+    arr.push(parseFloat(p.toFixed(2)));
+  }
+  arr.push(base);
+  return arr;
+}
+
+function genLabels(days) {
+  const now = new Date(2026, 2, 29);
+  return Array.from({ length: days + 1 }, (_, i) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - (days - i));
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  });
+}
+
+function renderTickers() {
+  const bar = document.getElementById('tickerBar');
+  bar.innerHTML = ASSETS.map(a =>
+    `<button class="ticker-btn${a.symbol === active ? ' active' : ''}" data-sym="${a.symbol}">${a.symbol}</button>`
+  ).join('');
+  bar.querySelectorAll('.ticker-btn').forEach(b => b.addEventListener('click', () => {
+    active = b.dataset.sym;
+    renderTickers(); renderMetrics(); renderPriceChart(); renderCompare(); renderWatchlist();
+  }));
+}
+
+function renderMetrics() {
+  const a = getAsset(active);
+  const sign = a.chg >= 0 ? '+' : '';
+  const cls = a.chg >= 0 ? 'up' : 'dn';
+  const unit = a.type === 'metal' ? 'per troy oz' : a.type === 'index' ? 'points' : '24h';
+  document.getElementById('metrics').innerHTML = `
+    <div class="metric"><div class="metric-label">Price</div><div class="metric-value" style="font-size:${a.price >= 10000 ? '16px' : a.price >= 1000 ? '18px' : '22px'}">${fmtPrice(a)}</div><div class="metric-sub ${cls}">${sign}${a.chg}%</div></div>
+    <div class="metric"><div class="metric-label">Change</div><div class="metric-value ${cls}">${sign}${a.chg}%</div><div class="metric-sub" style="color:var(--text-secondary)">today</div></div>
+    <div class="metric"><div class="metric-label">Volume</div><div class="metric-value" style="font-size:18px">${a.vol}</div><div class="metric-sub" style="color:var(--text-secondary)">${unit}</div></div>
+    <div class="metric"><div class="metric-label">Market cap</div><div class="metric-value" style="font-size:18px">${a.mktcap}</div><div class="metric-sub" style="color:var(--text-secondary)">${a.name}</div></div>
+  `;
+}
+
+let priceChartInst = null;
+function renderPriceChart() {
+  const a = getAsset(active);
+  const days = RANGES[activeRange];
+  const prices = genPrices(a.price, days, getVol(a));
+  const labels = genLabels(days);
+  const up = prices[prices.length - 1] >= prices[0];
+  const col = up ? '#3B6D11' : '#A32D2D';
+  const colLight = up ? 'rgba(59,109,17,0.08)' : 'rgba(163,45,45,0.08)';
+  if (priceChartInst) priceChartInst.destroy();
+  priceChartInst = new Chart(document.getElementById('priceChart'), {
+    type: 'line',
+    data: { labels, datasets: [{ data: prices, borderColor: col, borderWidth: 2, pointRadius: 0, fill: true, backgroundColor: colLight, tension: 0.3 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => fmtPrice(a, ctx.parsed.y) } } },
+      scales: {
+        x: { ticks: { color: '#888', maxTicksLimit: 8, autoSkip: true }, grid: { display: false } },
+        y: { ticks: { color: '#888', callback: v => fmtPrice(a, v) }, grid: { color: 'rgba(128,128,128,0.1)' } }
+      }
+    }
+  });
+}
+
+let compareChartInst = null;
+function renderCompare() {
+  const days = RANGES[activeRange];
+  const labels = genLabels(days);
+  const step = Math.max(1, Math.floor(labels.length / 20));
+  const sliced = labels.filter((_, i) => i % step === 0 || i === labels.length - 1);
+  const datasets = ASSETS.map(a => {
+    const prices = genPrices(a.price, days, getVol(a));
+    const base = prices[0];
+    const pctArr = prices.filter((_, i) => i % step === 0 || i === prices.length - 1)
+      .map(p => parseFloat(((p - base) / base * 100).toFixed(2)));
+    return { label: a.symbol, data: pctArr, borderColor: a.color, borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false };
+  });
+  document.getElementById('compareLegend').innerHTML = ASSETS.map(a =>
+    `<span><span class="legend-dot" style="background:${a.color}"></span>${a.symbol}</span>`
+  ).join('');
+  if (compareChartInst) compareChartInst.destroy();
+  compareChartInst = new Chart(document.getElementById('compareChart'), {
+    type: 'line',
+    data: { labels: sliced, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + (ctx.parsed.y >= 0 ? '+' : '') + ctx.parsed.y + '%' } } },
+      scales: {
+        x: { ticks: { color: '#888', maxTicksLimit: 8, autoSkip: true }, grid: { display: false } },
+        y: { ticks: { color: '#888', callback: v => (v >= 0 ? '+' : '') + v + '%' }, grid: { color: 'rgba(128,128,128,0.1)' } }
+      }
+    }
+  });
+}
+
+function renderWatchlist() {
+  const maxPrice = Math.max(...ASSETS.map(a => a.price));
+  document.getElementById('watchlist').innerHTML = ASSETS.map(a => {
+    const cls = a.chg >= 0 ? 'up' : 'dn';
+    const sign = a.chg >= 0 ? '+' : '';
+    const barW = Math.round(a.price / maxPrice * 100);
+    return `<div class="watch-card">
+      <div class="watch-name">${a.symbol} <span class="watch-type">${a.type}</span></div>
+      <div class="watch-price">${fmtPrice(a)}</div>
+      <div class="metric-sub ${cls}" style="font-size:12px;margin-top:2px">${sign}${a.chg}% today</div>
+      <div class="bar-wrap"><div class="bar-fill" style="width:${barW}%;background:${a.color}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('rangeBtns').querySelectorAll('.range-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    activeRange = b.dataset.r;
+    document.querySelectorAll('.range-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    renderPriceChart(); renderCompare();
+  });
+});
+
+renderTickers(); renderMetrics(); renderPriceChart(); renderCompare(); renderWatchlist();
+</script>
+</body>
+</html>
