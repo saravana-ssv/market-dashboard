@@ -46,9 +46,12 @@
 
     .container { max-width: 900px; margin: 0 auto; }
 
-    header { margin-bottom: 1.75rem; }
+    header { margin-bottom: 1.75rem; display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
     header h1 { font-size: 22px; font-weight: 500; color: var(--text-primary); }
     header p { font-size: 13px; color: var(--text-secondary); margin-top: 3px; }
+    .live-badge { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #3B6D11; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
 
     .ticker-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.25rem; }
     .ticker-btn {
@@ -68,11 +71,7 @@
     }
     @media (max-width: 600px) { .metrics { grid-template-columns: repeat(2, 1fr); } }
 
-    .metric {
-      background: var(--bg-secondary);
-      border-radius: var(--radius-md);
-      padding: 12px 14px;
-    }
+    .metric { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 12px 14px; }
     .metric-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
     .metric-value { font-size: 22px; font-weight: 500; color: var(--text-primary); }
     .metric-sub { font-size: 12px; margin-top: 2px; }
@@ -84,17 +83,13 @@
       border: 0.5px solid var(--border);
       background: transparent; color: var(--text-secondary); cursor: pointer;
     }
-    .range-btn.active {
-      background: var(--bg-secondary); color: var(--text-primary);
-      border-color: var(--border-md);
-    }
+    .range-btn.active { background: var(--bg-secondary); color: var(--text-primary); border-color: var(--border-md); }
 
     .chart-card {
       background: var(--bg-primary);
       border: 0.5px solid var(--border);
       border-radius: var(--radius-lg);
-      padding: 16px;
-      margin-bottom: 1.25rem;
+      padding: 16px; margin-bottom: 1.25rem;
     }
     .chart-wrap { position: relative; width: 100%; height: 280px; }
 
@@ -105,21 +100,17 @@
 
     .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 8px; font-size: 12px; color: var(--text-secondary); }
     .legend-dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 4px; vertical-align: middle; }
-
     .compare-chart-wrap { position: relative; width: 100%; height: 220px; }
 
     .watchlist {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px; margin-bottom: 1.25rem;
     }
     @media (max-width: 600px) { .watchlist { grid-template-columns: repeat(2, 1fr); } }
 
     .watch-card {
-      background: var(--bg-primary);
-      border: 0.5px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 12px 14px;
+      background: var(--bg-primary); border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg); padding: 12px 14px;
     }
     .watch-name { font-size: 13px; font-weight: 500; color: var(--text-primary); margin-bottom: 2px; }
     .watch-type { font-weight: 400; color: var(--text-secondary); font-size: 11px; }
@@ -133,10 +124,13 @@
 <body>
 <div class="container">
   <header>
-    <h1>Market Dashboard</h1>
-    <p>Stocks · Crypto · Indices · Metals — simulated data</p>
+    <div>
+      <h1>Market Dashboard</h1>
+      <p>Stocks · Crypto · Indices · Metals</p>
+    </div>
+    <div class="live-badge"><span class="live-dot"></span><span id="lastUpdated">Fetching live data...</span></div>
   </header>
-<div class="custom"></div>
+
   <div class="ticker-bar" id="tickerBar"></div>
   <div class="metrics" id="metrics"></div>
 
@@ -159,20 +153,23 @@
   <div class="section-title">Watchlist</div>
   <div class="watchlist" id="watchlist"></div>
 
-  <footer>Data: simulated · Last updated just now</footer>
+  <footer>Live data via Finnhub · Auto-refreshes every 60s</footer>
 </div>
 
 <script>
+const API_KEY = 'd75in99r01qk56kctsfgd75in99r01qk56kctsg0';
+const BASE = 'https://finnhub.io/api/v1';
+
 const ASSETS = [
-  { symbol: 'AAPL',  name: 'Apple',      type: 'stock',  color: '#185FA5', price: 213.49, chg: 1.24,  vol: '58.2M', mktcap: '3.28T' },
-  { symbol: 'TSLA',  name: 'Tesla',      type: 'stock',  color: '#3B6D11', price: 172.63, chg: -2.11, vol: '91.4M', mktcap: '549B'  },
-  { symbol: 'NVDA',  name: 'NVIDIA',     type: 'stock',  color: '#854F0B', price: 875.40, chg: 3.05,  vol: '44.1M', mktcap: '2.15T' },
-  { symbol: 'MSFT',  name: 'Microsoft',  type: 'stock',  color: '#533AB7', price: 415.20, chg: 0.67,  vol: '22.8M', mktcap: '3.09T' },
-  { symbol: 'BTC',   name: 'Bitcoin',    type: 'crypto', color: '#BA7517', price: 68420,  chg: 2.88,  vol: '28.3B', mktcap: '1.35T' },
-  { symbol: 'NDX',   name: 'Nasdaq 100', type: 'index',  color: '#0F6E56', price: 18342,  chg: 0.91,  vol: '—',     mktcap: '—'     },
-  { symbol: 'SPX',   name: 'S&P 500',    type: 'index',  color: '#993356', price: 5248,   chg: 0.52,  vol: '—',     mktcap: '—'     },
-  { symbol: 'XAU',   name: 'Gold',       type: 'metal',  color: '#BA7517', price: 2328,   chg: 0.38,  vol: '—',     mktcap: '—'     },
-  { symbol: 'XAG',   name: 'Silver',     type: 'metal',  color: '#888780', price: 27.42,  chg: -0.21, vol: '—',     mktcap: '—'     },
+  { symbol: 'AAPL', finnhub: 'AAPL',            name: 'Apple',      type: 'stock',  color: '#185FA5', price: null, chg: null, vol: '—' },
+  { symbol: 'TSLA', finnhub: 'TSLA',            name: 'Tesla',      type: 'stock',  color: '#3B6D11', price: null, chg: null, vol: '—' },
+  { symbol: 'NVDA', finnhub: 'NVDA',            name: 'NVIDIA',     type: 'stock',  color: '#854F0B', price: null, chg: null, vol: '—' },
+  { symbol: 'MSFT', finnhub: 'MSFT',            name: 'Microsoft',  type: 'stock',  color: '#533AB7', price: null, chg: null, vol: '—' },
+  { symbol: 'BTC',  finnhub: 'BINANCE:BTCUSDT', name: 'Bitcoin',    type: 'crypto', color: '#BA7517', price: null, chg: null, vol: '—' },
+  { symbol: 'NDX',  finnhub: 'QQQ',             name: 'Nasdaq 100', type: 'index',  color: '#0F6E56', price: null, chg: null, vol: '—' },
+  { symbol: 'SPX',  finnhub: 'SPY',             name: 'S&P 500',    type: 'index',  color: '#993356', price: null, chg: null, vol: '—' },
+  { symbol: 'XAU',  finnhub: 'OANDA:XAU_USD',  name: 'Gold',       type: 'metal',  color: '#BA7517', price: null, chg: null, vol: '—' },
+  { symbol: 'XAG',  finnhub: 'OANDA:XAG_USD',  name: 'Silver',     type: 'metal',  color: '#888780', price: null, chg: null, vol: '—' },
 ];
 
 let active = 'AAPL';
@@ -180,7 +177,6 @@ let activeRange = '1W';
 const RANGES = { '1W': 7, '1M': 30, '3M': 90, '1Y': 365 };
 
 function getAsset(sym) { return ASSETS.find(a => a.symbol === sym); }
-
 function getVol(a) {
   if (a.type === 'crypto') return 0.04;
   if (a.type === 'index') return 0.008;
@@ -190,11 +186,39 @@ function getVol(a) {
 
 function fmtPrice(a, val) {
   const v = val !== undefined ? val : a.price;
+  if (v === null || v === undefined) return '—';
   if (a.type === 'crypto') return '$' + Math.round(v).toLocaleString('en-US');
-  if (a.type === 'index') return v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (a.type === 'index') return '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function fmtVol(v) {
+  if (!v) return '—';
+  if (v >= 1e9) return (v / 1e9).toFixed(1) + 'B';
+  if (v >= 1e6) return (v / 1e6).toFixed(1) + 'M';
+  if (v >= 1e3) return (v / 1e3).toFixed(1) + 'K';
+  return String(v);
+}
+
+async function fetchQuote(asset) {
+  try {
+    const res = await fetch(`${BASE}/quote?symbol=${encodeURIComponent(asset.finnhub)}&token=${API_KEY}`);
+    const data = await res.json();
+    if (data.c && data.c > 0) {
+      asset.price = data.c;
+      asset.chg = data.dp !== undefined ? parseFloat(data.dp.toFixed(2)) : null;
+      asset.vol = fmtVol(data.v);
+    }
+  } catch (e) { console.warn('Quote failed:', asset.symbol); }
+}
+
+async function fetchAllQuotes() {
+  await Promise.all(ASSETS.map(a => fetchQuote(a)));
+  document.getElementById('lastUpdated').textContent =
+    'Updated ' + new Date().toLocaleTimeString();
+}
+
+// Simulated fallback for history chart
 function genPrices(base, days, vol) {
   let p = base * (1 - vol * days / 200);
   const arr = [];
@@ -207,12 +231,30 @@ function genPrices(base, days, vol) {
 }
 
 function genLabels(days) {
-  const now = new Date(2026, 2, 29);
+  const now = new Date();
   return Array.from({ length: days + 1 }, (_, i) => {
     const d = new Date(now);
     d.setDate(d.getDate() - (days - i));
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   });
+}
+
+async function fetchCandles(asset, range) {
+  const res = { '1W': 'D', '1M': 'D', '3M': 'W', '1Y': 'M' };
+  const days = RANGES[range];
+  const now = Math.floor(Date.now() / 1000);
+  const from = now - days * 86400;
+  try {
+    const r = await fetch(`${BASE}/stock/candle?symbol=${encodeURIComponent(asset.finnhub)}&resolution=${res[range]}&from=${from}&to=${now}&token=${API_KEY}`);
+    const data = await r.json();
+    if (data.s === 'ok' && data.c && data.c.length > 0) {
+      return {
+        labels: data.t.map(ts => new Date(ts * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
+        prices: data.c
+      };
+    }
+  } catch (e) { console.warn('Candles failed:', asset.symbol); }
+  return null;
 }
 
 function renderTickers() {
@@ -222,29 +264,42 @@ function renderTickers() {
   ).join('');
   bar.querySelectorAll('.ticker-btn').forEach(b => b.addEventListener('click', () => {
     active = b.dataset.sym;
-    renderTickers(); renderMetrics(); renderPriceChart(); renderCompare(); renderWatchlist();
+    renderTickers(); renderMetrics(); renderPriceChart(); renderWatchlist();
   }));
 }
 
 function renderMetrics() {
   const a = getAsset(active);
-  const sign = a.chg >= 0 ? '+' : '';
-  const cls = a.chg >= 0 ? 'up' : 'dn';
-  const unit = a.type === 'metal' ? 'per troy oz' : a.type === 'index' ? 'points' : '24h';
+  const sign = a.chg !== null && a.chg >= 0 ? '+' : '';
+  const cls = a.chg !== null ? (a.chg >= 0 ? 'up' : 'dn') : '';
+  const chgStr = a.chg !== null ? `${sign}${a.chg}%` : '—';
+  const unit = a.type === 'metal' ? 'per troy oz' : a.type === 'index' ? 'ETF proxy' : '24h vol';
+  const fontSize = a.price && a.price >= 10000 ? '16px' : a.price && a.price >= 1000 ? '18px' : '22px';
   document.getElementById('metrics').innerHTML = `
-    <div class="metric"><div class="metric-label">Price</div><div class="metric-value" style="font-size:${a.price >= 10000 ? '16px' : a.price >= 1000 ? '18px' : '22px'}">${fmtPrice(a)}</div><div class="metric-sub ${cls}">${sign}${a.chg}%</div></div>
-    <div class="metric"><div class="metric-label">Change</div><div class="metric-value ${cls}">${sign}${a.chg}%</div><div class="metric-sub" style="color:var(--text-secondary)">today</div></div>
+    <div class="metric"><div class="metric-label">Price</div><div class="metric-value" style="font-size:${fontSize}">${fmtPrice(a)}</div><div class="metric-sub ${cls}">${chgStr}</div></div>
+    <div class="metric"><div class="metric-label">Change</div><div class="metric-value ${cls}">${chgStr}</div><div class="metric-sub" style="color:var(--text-secondary)">today</div></div>
     <div class="metric"><div class="metric-label">Volume</div><div class="metric-value" style="font-size:18px">${a.vol}</div><div class="metric-sub" style="color:var(--text-secondary)">${unit}</div></div>
-    <div class="metric"><div class="metric-label">Market cap</div><div class="metric-value" style="font-size:18px">${a.mktcap}</div><div class="metric-sub" style="color:var(--text-secondary)">${a.name}</div></div>
+    <div class="metric"><div class="metric-label">Asset</div><div class="metric-value" style="font-size:18px">${a.symbol}</div><div class="metric-sub" style="color:var(--text-secondary)">${a.name}</div></div>
   `;
 }
 
 let priceChartInst = null;
-function renderPriceChart() {
+async function renderPriceChart() {
   const a = getAsset(active);
-  const days = RANGES[activeRange];
-  const prices = genPrices(a.price, days, getVol(a));
-  const labels = genLabels(days);
+  let labels, prices;
+
+  if (a.type === 'stock' || a.type === 'index') {
+    const candles = await fetchCandles(a, activeRange);
+    if (candles) { labels = candles.labels; prices = candles.prices; }
+  }
+
+  if (!prices) {
+    const base = a.price || 100;
+    const days = RANGES[activeRange];
+    prices = genPrices(base, days, getVol(a));
+    labels = genLabels(days);
+  }
+
   const up = prices[prices.length - 1] >= prices[0];
   const col = up ? '#3B6D11' : '#A32D2D';
   const colLight = up ? 'rgba(59,109,17,0.08)' : 'rgba(163,45,45,0.08)';
@@ -270,10 +325,11 @@ function renderCompare() {
   const step = Math.max(1, Math.floor(labels.length / 20));
   const sliced = labels.filter((_, i) => i % step === 0 || i === labels.length - 1);
   const datasets = ASSETS.map(a => {
-    const prices = genPrices(a.price, days, getVol(a));
-    const base = prices[0];
+    const base = a.price || 100;
+    const prices = genPrices(base, days, getVol(a));
+    const baseVal = prices[0];
     const pctArr = prices.filter((_, i) => i % step === 0 || i === prices.length - 1)
-      .map(p => parseFloat(((p - base) / base * 100).toFixed(2)));
+      .map(p => parseFloat(((p - baseVal) / baseVal * 100).toFixed(2)));
     return { label: a.symbol, data: pctArr, borderColor: a.color, borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false };
   });
   document.getElementById('compareLegend').innerHTML = ASSETS.map(a =>
@@ -295,15 +351,16 @@ function renderCompare() {
 }
 
 function renderWatchlist() {
-  const maxPrice = Math.max(...ASSETS.map(a => a.price));
+  const maxPrice = Math.max(...ASSETS.map(a => a.price || 0), 1);
   document.getElementById('watchlist').innerHTML = ASSETS.map(a => {
-    const cls = a.chg >= 0 ? 'up' : 'dn';
-    const sign = a.chg >= 0 ? '+' : '';
-    const barW = Math.round(a.price / maxPrice * 100);
+    const cls = a.chg !== null ? (a.chg >= 0 ? 'up' : 'dn') : '';
+    const sign = a.chg !== null && a.chg >= 0 ? '+' : '';
+    const chgStr = a.chg !== null ? `${sign}${a.chg}% today` : '—';
+    const barW = Math.round((a.price || 0) / maxPrice * 100);
     return `<div class="watch-card">
       <div class="watch-name">${a.symbol} <span class="watch-type">${a.type}</span></div>
       <div class="watch-price">${fmtPrice(a)}</div>
-      <div class="metric-sub ${cls}" style="font-size:12px;margin-top:2px">${sign}${a.chg}% today</div>
+      <div class="metric-sub ${cls}" style="font-size:12px;margin-top:2px">${chgStr}</div>
       <div class="bar-wrap"><div class="bar-fill" style="width:${barW}%;background:${a.color}"></div></div>
     </div>`;
   }).join('');
@@ -318,7 +375,17 @@ document.getElementById('rangeBtns').querySelectorAll('.range-btn').forEach(b =>
   });
 });
 
-renderTickers(); renderMetrics(); renderPriceChart(); renderCompare(); renderWatchlist();
+async function init() {
+  renderTickers(); renderMetrics(); renderWatchlist(); renderCompare(); renderPriceChart();
+  await fetchAllQuotes();
+  renderTickers(); renderMetrics(); renderWatchlist(); renderPriceChart();
+  setInterval(async () => {
+    await fetchAllQuotes();
+    renderMetrics(); renderWatchlist(); renderPriceChart();
+  }, 60000);
+}
+
+init();
 </script>
 </body>
 </html>
